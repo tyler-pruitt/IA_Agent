@@ -11,6 +11,7 @@ python3 company_valuation_cli.py 000001.XSHE --quarter latest
 Run the project as one pipeline. Each step writes the file used by the next step.
 
 CSV files are written with `utf-8-sig` so Chinese company names open correctly in Excel.
+```
 
 ## Main scripts
 
