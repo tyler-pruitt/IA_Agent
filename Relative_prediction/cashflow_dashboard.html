@@ -144,15 +144,18 @@
       </div>
 
       <div class="menu-label">Pages</div>
-      <a class="menu-item" href="/valuation_agent_dashboard.html"><i class="bi bi-bar-chart-line"></i> Fair Multiple</a>
-      <a class="menu-item active" href="/cashflow_dashboard.html"><i class="bi bi-cash-stack"></i> Cashflow DCF</a>
+      <a class="menu-item" href="valuation_agent_dashboard.html"><i class="bi bi-bar-chart-line"></i> Fair Multiple</a>
+      <a class="menu-item active" href="cashflow_dashboard.html"><i class="bi bi-cash-stack"></i> Cashflow DCF</a>
     </aside>
 
     <main class="content">
       <header class="topbar">
+        <form id="cashflowSearchForm" class="d-flex align-items-center gap-3">
+          <button class="search-submit btn btn-link p-0 text-muted" type="submit" aria-label="Search company"><i class="bi bi-search"></i></button>
+          <input id="companyQuery" type="text" class="form-control border-0 shadow-none px-0" value="601318.XSHG" placeholder="请输入企业名、代码或企业号" aria-label="Company name, trading code, or order_book_id" style="background:transparent;outline:none;min-width:220px;">
+        </form>
         <div>
-          <h1 class="h4 mb-1">Future cashflow prediction + DCF</h1>
-          <p class="mb-0 text-muted">Estimate future cashflow scenarios and discounted cashflow value.</p>
+          <span id="headerCompanyName" class="fw-semibold text-muted small">中国平安</span>
         </div>
       </header>
 
@@ -164,9 +167,9 @@
               <h2 class="h5 mb-3">DCF assumptions</h2>
               <form id="assumptionForm">
                 <label class="form-label" for="discountRate">Discount rate</label>
-                <input id="discountRate" class="form-control mb-3" type="number" step="0.01" value="0.20">
+                <input id="discountRate" class="form-control mb-3" type="number" step="0.01" value="0.12">
                 <label class="form-label" for="growthRate">Terminal growth rate</label>
-                <input id="growthRate" class="form-control mb-4" type="number" step="0.01" value="0.15">
+                <input id="growthRate" class="form-control mb-4" type="number" step="0.01" value="0.03">
                 <button class="btn btn-primary w-100" type="submit">Recalculate DCF</button>
               </form>
             </div>
@@ -192,13 +195,16 @@
   </div>
 
   <script>
-    const form = document.getElementById("assumptionForm");
+    const assumptionForm = document.getElementById("assumptionForm");
+    const searchForm = document.getElementById("cashflowSearchForm");
+    const companyQuery = document.getElementById("companyQuery");
     const discountRate = document.getElementById("discountRate");
     const growthRate = document.getElementById("growthRate");
     const cashflowTitle = document.getElementById("cashflowTitle");
     const cashflowSubtitle = document.getElementById("cashflowSubtitle");
     const cashflowNotice = document.getElementById("cashflowNotice");
     const modelCards = document.getElementById("modelCards");
+    const headerCompanyName = document.getElementById("headerCompanyName");
     const localApiOrigin = "http://127.0.0.1:8765";
 
     function apiOrigin() {
@@ -211,11 +217,16 @@
 
     function renderModel(model) {
       const cashFlows = model.cash_flows.map((value, index) => `<li class="d-flex justify-content-between"><span>Year ${index + 1}</span><strong>${formatNumber(value)}</strong></li>`).join("");
+      const isRandomForest = model.model === "Random Forest";
+      const cardClass = isRandomForest ? "border border-primary rounded-4 p-3 h-100" : "border rounded-4 p-3 h-100";
+      const badge = isRandomForest ? '<span class="badge text-bg-primary mb-2">Primary model</span>' : "";
       return `
-        <div class="col-12 col-lg-4">
-          <div class="border rounded-4 p-3 h-100">
+        <div class="col-12 col-lg-6">
+          <div class="${cardClass}">
+            ${badge}
             <p class="text-muted mb-1">${model.model}</p>
-            <h3 class="h4 mb-3">${formatNumber(model.dcf_value)}</h3>
+            <h3 class="h4 mb-1">${formatNumber(model.dcf_value)}</h3>
+            <p class="small text-muted mb-2">Terminal value ${formatNumber(model.terminal_value)}</p>
             <p class="small text-muted mb-2">R2 ${formatNumber(model.r2)} | MAE ${formatNumber(model.mae)}</p>
             <ul class="cashflow-list list-unstyled small mb-0">${cashFlows}</ul>
           </div>
@@ -223,7 +234,12 @@
     }
 
     async function loadCashflow() {
-      const params = new URLSearchParams({ discount_rate: discountRate.value, growth_rate: growthRate.value });
+      const company = companyQuery.value.trim() || "601318.XSHG";
+      const params = new URLSearchParams({
+        company,
+        discount_rate: discountRate.value,
+        growth_rate: growthRate.value,
+      });
       cashflowNotice.className = "alert alert-primary py-2 mb-4";
       cashflowNotice.textContent = "Loading cashflow DCF results...";
       try {
@@ -238,8 +254,14 @@
         }
         cashflowTitle.textContent = `${data.company_name} cashflow DCF`;
         cashflowSubtitle.textContent = `${data.company_id} | discount ${(data.discount_rate * 100).toFixed(1)}% | terminal growth ${(data.growth_rate * 100).toFixed(1)}%`;
-        cashflowNotice.className = "alert alert-primary py-2 mb-4 d-none";
-        cashflowNotice.textContent = "";
+        headerCompanyName.textContent = data.company_name;
+        if (data.note) {
+          cashflowNotice.className = "alert alert-primary py-2 mb-4";
+          cashflowNotice.textContent = data.note;
+        } else {
+          cashflowNotice.className = "alert alert-primary py-2 mb-4 d-none";
+          cashflowNotice.textContent = "";
+        }
         modelCards.innerHTML = data.models.map(renderModel).join("");
       } catch (error) {
         cashflowNotice.className = "alert alert-danger py-2 mb-4";
@@ -247,7 +269,12 @@
       }
     }
 
-    form.addEventListener("submit", (event) => {
+    assumptionForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      loadCashflow();
+    });
+
+    searchForm.addEventListener("submit", (event) => {
       event.preventDefault();
       loadCashflow();
     });

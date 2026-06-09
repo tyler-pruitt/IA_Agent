@@ -3,9 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import socket
 import subprocess
-import sys
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -333,80 +331,27 @@ def build_report(row: pd.Series, metrics: pd.DataFrame, top_peers: int) -> str:
 
 
 
-CASHFLOW_NOTEBOOK_SOURCE = "Final_predict_cashflow.ipynb"
-CASHFLOW_COMPANY_ID = "601318.XSHG"
-CASHFLOW_COMPANY_NAME = "中国平安"
-CASHFLOW_NOTEBOOK_PREDICTIONS = [
-    {
-        "model": "Random Forest",
-        "r2": -0.11738465219886018,
-        "mae": 1.0537357591382552,
-        "cash_flows": [7.64370518, 9.16119058, 10.36025751, 10.46907515, 5.82264521],
-    },
-    {
-        "model": "Gradient Boosting Regression",
-        "r2": -0.04255939762594736,
-        "mae": 1.0453515429194349,
-        "cash_flows": [21.13978714, 26.50799444, 23.41340999, 22.88117037, 1.62783564],
-    },
-    {
-        "model": "LSTM",
-        "r2": -1.312308,
-        "mae": 1.618468,
-        "cash_flows": [16.954739, 6.320756, -10.627827, 2.6037467, -6.24342108450203],
-    },
-]
-
-
 def finite_float(value: object) -> float | None:
     number = to_float(value)
     return float(number) if np.isfinite(number) else None
 
 
-def terminal_value_gordon(cf_final_year: float, discount_rate: float, growth_rate: float) -> float:
-    if discount_rate <= growth_rate:
-        raise ValueError("discount_rate must be greater than growth_rate.")
-    return cf_final_year * (1 + growth_rate) / (discount_rate - growth_rate)
+def cashflow_payload(
+    discount_rate: float = 0.12,
+    growth_rate: float = 0.03,
+    company_id: str = "601318.XSHG",
+) -> dict[str, object]:
+    from ml_cashflow_predictor import run_prediction
+    return run_prediction(company_id=company_id, discount_rate=discount_rate, growth_rate=growth_rate)
 
 
-def dcf_valuation(cash_flows: list[float], discount_rate: float, terminal_value: float | None = None) -> float:
-    cash_flow_array = np.array(cash_flows, dtype=float)
-    years = np.arange(1, len(cash_flow_array) + 1)
-    present_value = float((cash_flow_array / (1 + discount_rate) ** years).sum())
-    if terminal_value is not None:
-        present_value += float(terminal_value / (1 + discount_rate) ** len(cash_flow_array))
-    return present_value
-
-
-def cashflow_payload(discount_rate: float = 0.20, growth_rate: float = 0.15) -> dict[str, object]:
-    if discount_rate <= growth_rate:
-        raise ValueError("discount_rate must be greater than growth_rate.")
-
-    models = []
-    for item in CASHFLOW_NOTEBOOK_PREDICTIONS:
-        cash_flows = item["cash_flows"]
-        terminal_value = terminal_value_gordon(cash_flows[-1], discount_rate, growth_rate)
-        dcf_value = dcf_valuation([cash_flows], discount_rate, terminal_value)
-        models.append(
-            {
-                "model": item["model"],
-                "r2": item["r2"],
-                "mae": item["mae"],
-                "cash_flows": cash_flows,
-                "terminal_value": terminal_value,
-                "dcf_value": dcf_value,
-            }
-        )
-
-    return {
-        "company_id": CASHFLOW_COMPANY_ID,
-        "company_name": CASHFLOW_COMPANY_NAME,
-        "source_notebook": CASHFLOW_NOTEBOOK_SOURCE,
-        "discount_rate": discount_rate,
-        "growth_rate": growth_rate,
-        "note": "Uses saved notebook prediction outputs and notebook DCF formulas; TensorFlow is not required for this page.",
-        "models": models,
-    }
+def resolve_cashflow_company_id(query: str) -> str:
+    normalized = query.strip()
+    if not normalized:
+        return "601318.XSHG"
+    predictions = load_predictions(ROOT / DEFAULT_PREDICTIONS)
+    rows = resolve_company(predictions, normalized)
+    return str(rows.iloc[0]["order_book_id"])
 
 
 def lookup_payload(
@@ -537,11 +482,20 @@ class ValuationRequestHandler(SimpleHTTPRequestHandler):
     def handle_cashflow(self, query_string: str) -> None:
         params = parse_qs(query_string)
         try:
-            discount_rate = float(params.get("discount_rate", ["0.20"])[0])
-            growth_rate = float(params.get("growth_rate", ["0.15"])[0])
-            payload = cashflow_payload(discount_rate, growth_rate)
+            company = resolve_cashflow_company_id(params.get("company", [""])[0])
+            discount_rate = float(params.get("discount_rate", ["0.12"])[0])
+            growth_rate = float(params.get("growth_rate", ["0.03"])[0])
+            payload = cashflow_payload(
+                discount_rate=discount_rate,
+                growth_rate=growth_rate,
+                company_id=company,
+            )
         except ValueError as exc:
             self.write_json({"error": str(exc)}, 400)
+        except LookupError as exc:
+            self.write_json({"error": str(exc)}, 404)
+        except FileNotFoundError as exc:
+            self.write_json({"error": str(exc)}, 500)
         else:
             self.write_json(payload, 200)
 

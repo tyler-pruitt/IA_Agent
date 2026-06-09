@@ -186,7 +186,19 @@
     }
 
     .close-price-info {
-      font-size: 0.85rem;
+      color: var(--heading);
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .signal-card-body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .signal-card-footer-note {
+      font-size: 0.8rem;
+      margin-top: auto;
     }
 
     .report-card-grid {
@@ -261,7 +273,7 @@
       <div class="menu-label">Dashboard</div>
       <a class="menu-item active" href="#overview"><i class="bi bi-grid"></i> Overview</a>
       <a class="menu-item" href="#lookup"><i class="bi bi-search"></i> Valuation Search</a>
-      <a class="menu-item" href="/cashflow_dashboard.html"><i class="bi bi-cash-stack"></i> Cashflow DCF</a>
+      <a class="menu-item" href="cashflow_dashboard.html"><i class="bi bi-cash-stack"></i> Cashflow DCF</a>
       <a class="menu-item" href="#pipeline"><i class="bi bi-diagram-3"></i> Pipeline</a>
       <a class="menu-item" href="#outputs"><i class="bi bi-table"></i> Outputs</a>
 
@@ -281,7 +293,7 @@
       <section id="overview" class="row g-4 mb-4">
         <div id="lookup" class="col-12 col-xl-8">
           <div class="card card-lite h-100">
-            <div class="card-body p-4">
+            <div class="card-body p-4 signal-card-body">
               <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
                   <h2 id="reportTitle" class="h5 mb-1">Fair value comparison</h2>
@@ -323,7 +335,8 @@
                 <div id="heroSignalIcon" class="stat-icon soft-success"><i id="heroSignalIconGlyph" class="bi bi-arrow-up-right"></i></div>
               </div>
               <p id="heroSignalText" class="mb-3">Example output state for a selected company after Step 3 prediction.</p>
-              <p id="heroClosePrice" class="close-price-info text-muted mb-0">当前股价: 等待数据...</p>
+              <p id="heroClosePrice" class="close-price-info mb-2">当前股价: 等待数据...</p>
+              <p id="heroDataNote" class="signal-card-footer-note text-muted mb-0">基于2025q4数据</p>
             </div>
           </div>
         </div>
@@ -414,6 +427,7 @@
     const reportMultiple = document.getElementById("reportMultiple");
     const reportFairMultiple = document.getElementById("reportFairMultiple");
     const heroClosePrice = document.getElementById("heroClosePrice");
+    const heroDataNote = document.getElementById("heroDataNote");
     const reportFairValue = document.getElementById("reportFairValue");
     const reportUpside = document.getElementById("reportUpside");
     const hgbModelNote = document.getElementById("hgbModelNote");
@@ -441,6 +455,11 @@
       return Number.isFinite(number) ? number.toLocaleString("en-US", { maximumFractionDigits: 4, minimumFractionDigits: 4 }) : "N/A";
     }
 
+    function formatPrice(value) {
+      const number = Number(value);
+      return Number.isFinite(number) ? `${number.toLocaleString("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 })} 元` : "N/A";
+    }
+
     function formatPercent(value) {
       const number = Number(value);
       return Number.isFinite(number) ? `${(number * 100).toLocaleString("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%` : "N/A";
@@ -448,11 +467,11 @@
 
     function projectionValue(data, projection, field) {
       if (projection === "hgb") {
-        if (field === "fairPrice") return data.fair_price_hgb_formatted || formatNumber(data.fair_price_hgb ?? data.hgb_fair_price);
+        if (field === "fairPrice") return formatPrice(data.fair_price_hgb ?? data.hgb_fair_price);
         if (field === "upside") return data.upside_downside_hgb_formatted || formatPercent(data.upside_downside_hgb ?? data.hgb_upside_downside);
         if (field === "upsideRaw") return data.upside_downside_hgb ?? data.hgb_upside_downside;
       }
-      if (field === "fairPrice") return data.fair_price_formatted || formatNumber(data.fair_price);
+      if (field === "fairPrice") return formatPrice(data.fair_price);
       if (field === "upside") return data.upside_downside_formatted || formatPercent(data.upside_downside);
       return data.upside_downside;
     }
@@ -493,7 +512,8 @@
       reportNotice.textContent = data.signal_sentence;
       reportMultiple.textContent = data.selected_multiple;
       reportFairMultiple.textContent = data.final_fair_multiple_formatted;
-      heroClosePrice.textContent = `当前股价: ${data.close_price_formatted} 元 (基于${data.quarter}数据)`;
+      heroClosePrice.textContent = `当前股价: ${formatPrice(data.close_price)}`;
+      heroDataNote.textContent = `基于${data.quarter}数据`;
       updateProjection();
     }
 
