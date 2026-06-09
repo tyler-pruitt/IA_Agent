@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fair Multiple Engine Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f5f9;
+      --card: #ffffff;
+      --text: #566a7f;
+      --heading: #384551;
+      --primary: #696cff;
+      --primary-soft: #e7e7ff;
+      --success: #71dd37;
+      --warning: #ffab00;
+      --danger: #ff3e1d;
+      --border: #d9dee3;
+      --shadow: 0 0.125rem 0.375rem rgba(67, 89, 113, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 0.95rem;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: var(--card);
+      border-right: 1px solid rgba(67, 89, 113, 0.08);
+      padding: 1.5rem 1rem;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .brand {
+      align-items: center;
+      color: var(--heading);
+      display: flex;
+      font-weight: 700;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      padding: 0 0.75rem;
+    }
+
+    .brand-mark {
+      align-items: center;
+      background: var(--primary);
+      border-radius: 0.75rem;
+      color: white;
+      display: grid;
+      height: 2.5rem;
+      place-items: center;
+      width: 2.5rem;
+    }
+
+    .menu-label {
+      color: #a1acb8;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin: 1.5rem 0 0.5rem;
+      padding: 0 0.75rem;
+      text-transform: uppercase;
+    }
+
+    .menu-item {
+      align-items: center;
+      border-radius: 0.625rem;
+      color: var(--text);
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 0.25rem;
+      padding: 0.75rem;
+      text-decoration: none;
+    }
+
+    .menu-item.active,
+    .menu-item:hover {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+
+    .content {
+      padding: 1.5rem;
+    }
+
+    .topbar {
+      align-items: center;
+      background: rgba(255, 255, 255, 0.86);
+      border-radius: 0.875rem;
+      box-shadow: var(--shadow);
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      padding: 1rem 1.25rem;
+    }
+
+    .search-box {
+      align-items: center;
+      display: flex;
+      gap: 0.75rem;
+      min-width: 280px;
+      flex: 1;
+    }
+
+    .search-box input {
+      border: 0;
+      color: var(--text);
+      outline: 0;
+      width: 100%;
+    }
+
+    .search-submit {
+      background: transparent;
+      border: 0;
+      color: var(--text);
+      padding: 0;
+    }
+
+    .card-lite {
+      background: var(--card);
+      border: 0;
+      border-radius: 1rem;
+      box-shadow: var(--shadow);
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      color: var(--heading);
+      font-weight: 700;
+    }
+
+    .stat-icon {
+      align-items: center;
+      border-radius: 0.75rem;
+      display: grid;
+      height: 2.75rem;
+      place-items: center;
+      width: 2.75rem;
+    }
+
+    .soft-primary { background: var(--primary-soft); color: var(--primary); }
+    .soft-success { background: #e8fadf; color: #2f9f0a; }
+    .soft-warning { background: #fff2d6; color: #b76e00; }
+    .soft-danger { background: #ffe0db; color: var(--danger); }
+
+    .pipeline-step {
+      border-left: 3px solid var(--primary);
+      padding-left: 1rem;
+    }
+
+    .badge-soft {
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .table > :not(caption) > * > * {
+      color: var(--text);
+      padding: 0.875rem 1rem;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      box-shadow: 0 0.125rem 0.25rem rgba(105, 108, 255, 0.35);
+    }
+
+    .form-control, .form-select {
+      border-color: var(--border);
+      color: var(--text);
+      padding: 0.75rem 0.875rem;
+    }
+
+    .close-price-info {
+      font-size: 0.85rem;
+    }
+
+    .report-card-grid {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: 1fr auto;
+    }
+
+    .projection-selector {
+      align-self: stretch;
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding-left: 1rem;
+    }
+
+    .projection-selector button {
+      background: var(--primary-soft);
+      border: 0;
+      border-radius: 999px;
+      color: var(--primary);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.5rem 0.65rem;
+      writing-mode: vertical-rl;
+    }
+
+    .projection-selector button.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .hgb-note {
+      display: none;
+    }
+
+    .hgb-note.visible {
+      display: block;
+    }
+
+    @media (max-width: 992px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .sidebar { height: auto; position: static; }
+      .content { padding: 1rem; }
+      .topbar { align-items: stretch; flex-direction: column; }
+      .search-box { min-width: auto; }
+      .report-card-grid { grid-template-columns: 1fr; }
+      .projection-selector {
+        border-left: 0;
+        border-top: 1px solid var(--border);
+        flex-direction: row;
+        padding-left: 0;
+        padding-top: 1rem;
+      }
+
+      .projection-selector button { writing-mode: horizontal-tb; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark"><i class="bi bi-bar-chart-line-fill"></i></div>
+        <div>
+          <div>Fair Multiple</div>
+          <small class="text-muted">Valuation Agent</small>
+        </div>
+      </div>
+
+      <div class="menu-label">Dashboard</div>
+      <a class="menu-item active" href="#overview"><i class="bi bi-grid"></i> Overview</a>
+      <a class="menu-item" href="#lookup"><i class="bi bi-search"></i> Valuation Search</a>
+      <a class="menu-item" href="/cashflow_dashboard.html"><i class="bi bi-cash-stack"></i> Cashflow DCF</a>
+      <a class="menu-item" href="#pipeline"><i class="bi bi-diagram-3"></i> Pipeline</a>
+      <a class="menu-item" href="#outputs"><i class="bi bi-table"></i> Outputs</a>
+
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <form id="valuationLookupForm" class="search-box">
+          <button class="search-submit" type="submit" aria-label="Search company"><i class="bi bi-search"></i></button>
+          <input id="companyQuery" type="text" placeholder="请输入企业名、企业号或代码" aria-label="Company name, company number, or code">
+        </form>
+        <div class="d-flex align-items-center gap-3">
+          <span class="badge rounded-pill badge-soft">2020q1 - 2025q4</span>
+        </div>
+      </header>
+
+      <section id="overview" class="row g-4 mb-4">
+        <div id="lookup" class="col-12 col-xl-8">
+          <div class="card card-lite h-100">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <h2 id="reportTitle" class="h5 mb-1">Fair value comparison</h2>
+                  <p id="reportSubtitle" class="text-muted mb-0">Search a company from the top bar to load the real valuation result.</p>
+                </div>
+                <span id="reportSignal" class="badge rounded-pill text-bg-success">UNDERVALUED</span>
+              </div>
+              <div id="reportNotice" class="alert alert-primary py-2 mb-4" role="status">Enter a company in the top search bar and press Enter.</div>
+              <div class="report-card-grid">
+                <div>
+                  <div class="row g-4">
+                    <div class="col-sm-6">
+                      <div class="mb-4"><p class="text-muted mb-1">Selected multiple</p><h3 id="reportMultiple" class="h5">P/E</h3></div>
+                      <div><p class="text-muted mb-1">Final fair multiple</p><h3 id="reportFairMultiple" class="h5">28.95x</h3></div>
+                    </div>
+                    <div class="col-sm-6">
+                      <div class="mb-4"><p class="text-muted mb-1">Fair stock price</p><h3 id="reportFairValue" class="h5">Calculated by Step 3</h3></div>
+                      <div><p class="text-muted mb-1">Upside/downside</p><h3 id="reportUpside" class="h5 text-success">Positive</h3></div>
+                    </div>
+                  </div>
+                  <p id="hgbModelNote" class="hgb-note text-muted small mb-0 mt-4">这是基于市场趋势学习后推导出的估值结果。</p>
+                </div>
+                <div id="valuationProjectionSelector" class="projection-selector" aria-label="Valuation projection selector">
+                  <button type="button" class="active" data-projection="sgd">SGD</button>
+                  <button type="button" data-projection="hgb">HGB</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-xl-4">
+          <div class="card card-lite h-100">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <p class="text-muted mb-1">Valuation signal</p>
+                  <h2 id="heroSignal" class="h4 mb-0">Undervalued</h2>
+                </div>
+                <div id="heroSignalIcon" class="stat-icon soft-success"><i id="heroSignalIconGlyph" class="bi bi-arrow-up-right"></i></div>
+              </div>
+              <p id="heroSignalText" class="mb-3">Example output state for a selected company after Step 3 prediction.</p>
+              <p id="heroClosePrice" class="close-price-info text-muted mb-0">当前股价: 等待数据...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="row g-4 mb-4">
+        <div class="col-6 col-xl-3">
+          <div class="card card-lite h-100"><div class="card-body p-4"><div class="stat-icon soft-primary mb-3"><i class="bi bi-database"></i></div><p class="text-muted mb-1">Raw rows</p><h3 class="h4 mb-0">125,065</h3></div></div>
+        </div>
+        <div class="col-6 col-xl-3">
+          <div class="card card-lite h-100"><div class="card-body p-4"><div class="stat-icon soft-success mb-3"><i class="bi bi-building"></i></div><p class="text-muted mb-1">Clean companies</p><h3 class="h4 mb-0">4,874</h3></div></div>
+        </div>
+        <div class="col-6 col-xl-3">
+          <div class="card card-lite h-100"><div class="card-body p-4"><div class="stat-icon soft-warning mb-3"><i class="bi bi-diagram-2"></i></div><p class="text-muted mb-1">Peer rows</p><h3 class="h4 mb-0">99,237</h3></div></div>
+        </div>
+        <div class="col-6 col-xl-3">
+          <div class="card card-lite h-100"><div class="card-body p-4"><div class="stat-icon soft-danger mb-3"><i class="bi bi-activity"></i></div><p class="text-muted mb-1">Signals ready</p><h3 class="h4 mb-0">99,201</h3></div></div>
+        </div>
+      </section>
+
+      <section id="pipeline" class="row g-4 mb-4">
+        <div class="col-12 col-xl-6">
+          <div class="card card-lite h-100">
+            <div class="card-body p-4">
+              <h2 class="h5 mb-4">Connected pipeline</h2>
+              <div class="pipeline-step mb-4"><h3 class="h6 mb-1">1. Fetch RQData</h3><p class="mb-0">Build raw database and market labels from quarterly panel data.</p></div>
+              <div class="pipeline-step mb-4"><h3 class="h6 mb-1">2. Comparable companies</h3><p class="mb-0">Create financial features, K-means clusters, DBSCAN diagnostics, and peer sets.</p></div>
+              <div class="pipeline-step mb-4"><h3 class="h6 mb-1">3. Multiple selection</h3><p class="mb-0">Choose P/E, P/B, P/S, or EV/EBITDA using deterministic finance rules.</p></div>
+              <div class="pipeline-step"><h3 class="h6 mb-1">4. Fair multiple prediction</h3><p class="mb-0">Train Ridge log-multiple models and blend with peer median multiples.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-xl-6">
+          <div class="card card-lite h-100">
+            <div class="card-body p-4">
+              <h2 class="h5 mb-4">Model metrics</h2>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead><tr><th>Multiple</th><th>Rows</th><th>Test R2</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td>P/E</td><td>36,776</td><td>0.493</td><td><span class="badge rounded-pill text-bg-primary">Ridge</span></td></tr>
+                    <tr><td>P/B</td><td>3,473</td><td>0.707</td><td><span class="badge rounded-pill text-bg-primary">Ridge</span></td></tr>
+                    <tr><td>P/S</td><td>25,132</td><td>0.695</td><td><span class="badge rounded-pill text-bg-primary">Ridge</span></td></tr>
+                    <tr><td>EV/EBITDA</td><td>33,856</td><td>0.306</td><td><span class="badge rounded-pill text-bg-primary">Ridge</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="outputs" class="card card-lite mb-4">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h2 class="h5 mb-1">Generated artifacts</h2>
+              <p class="text-muted mb-0">Key files produced by the existing Python workflow.</p>
+            </div>
+            <span class="badge rounded-pill badge-soft">outputs/</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead><tr><th>File</th><th>Purpose</th><th>Layer</th></tr></thead>
+              <tbody>
+                <tr><td>raw_rqdatac_database_2020q1_2025q4.csv</td><td>Vendor financial and market source values</td><td>Raw</td></tr>
+                <tr><td>step1_to_step2_input.csv</td><td>Clean universe with peer context</td><td>Features</td></tr>
+                <tr><td>step2_selected_multiples.csv</td><td>Selected valuation multiple and reason</td><td>Rules</td></tr>
+                <tr><td>step3_market_implied_multiple_predictions.csv</td><td>Fair multiple, fair stock price, and valuation signal</td><td>Prediction</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <footer class="text-center text-muted small pb-3">
+        Inspired by Sneat Bootstrap Admin Template. ThemeSelection attribution: <a href="https://themeselection.com/">ThemeSelection</a>
+      </footer>
+    </main>
+  </div>
+  <script>
+    const lookupForm = document.getElementById("valuationLookupForm");
+    const companyQuery = document.getElementById("companyQuery");
+    const reportTitle = document.getElementById("reportTitle");
+    const reportSubtitle = document.getElementById("reportSubtitle");
+    const reportSignal = document.getElementById("reportSignal");
+    const reportNotice = document.getElementById("reportNotice");
+    const reportMultiple = document.getElementById("reportMultiple");
+    const reportFairMultiple = document.getElementById("reportFairMultiple");
+    const heroClosePrice = document.getElementById("heroClosePrice");
+    const reportFairValue = document.getElementById("reportFairValue");
+    const reportUpside = document.getElementById("reportUpside");
+    const hgbModelNote = document.getElementById("hgbModelNote");
+    const projectionButtons = document.querySelectorAll("[data-projection]");
+    const heroSignal = document.getElementById("heroSignal");
+    const heroSignalIcon = document.getElementById("heroSignalIcon");
+    const heroSignalIconGlyph = document.getElementById("heroSignalIconGlyph");
+    const heroSignalText = document.getElementById("heroSignalText");
+    const localApiOrigin = "http://127.0.0.1:8765";
+    let selectedProjection = "sgd";
+    let currentReportData = null;
+
+    function apiUrl(company, quarter) {
+      const params = new URLSearchParams({ company, quarter });
+      const apiOrigin = window.location.protocol === "file:" ? localApiOrigin : window.location.origin;
+      return `${apiOrigin}/api/valuation?${params.toString()}`;
+    }
+
+    function startupMessage(error) {
+      return `${error.message} Start the real valuation server from the project folder, then open http://127.0.0.1:8765/: python3 valuation_api_server.py`;
+    }
+
+    function formatNumber(value) {
+      const number = Number(value);
+      return Number.isFinite(number) ? number.toLocaleString("en-US", { maximumFractionDigits: 4, minimumFractionDigits: 4 }) : "N/A";
+    }
+
+    function formatPercent(value) {
+      const number = Number(value);
+      return Number.isFinite(number) ? `${(number * 100).toLocaleString("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%` : "N/A";
+    }
+
+    function projectionValue(data, projection, field) {
+      if (projection === "hgb") {
+        if (field === "fairPrice") return data.fair_price_hgb_formatted || formatNumber(data.fair_price_hgb ?? data.hgb_fair_price);
+        if (field === "upside") return data.upside_downside_hgb_formatted || formatPercent(data.upside_downside_hgb ?? data.hgb_upside_downside);
+        if (field === "upsideRaw") return data.upside_downside_hgb ?? data.hgb_upside_downside;
+      }
+      if (field === "fairPrice") return data.fair_price_formatted || formatNumber(data.fair_price);
+      if (field === "upside") return data.upside_downside_formatted || formatPercent(data.upside_downside);
+      return data.upside_downside;
+    }
+
+    function updateSignalCard(data, isUndervalued, selectedUpside) {
+      heroSignal.textContent = isUndervalued ? "Undervalued" : "Overvalued";
+      heroSignalIcon.className = `stat-icon ${isUndervalued ? "soft-success" : "soft-danger"}`;
+      heroSignalIconGlyph.className = `bi ${isUndervalued ? "bi-arrow-up-right" : "bi-arrow-down-right"}`;
+      heroSignalText.textContent = `${data.symbol} (${data.order_book_id}) is ${isUndervalued ? "undervalued" : "overvalued"} for ${data.quarter}: ${selectedUpside} upside/downside versus actual market cap.`;
+    }
+
+    function updateProjection() {
+      if (!currentReportData) return;
+      const data = currentReportData;
+      const useHgb = selectedProjection === "hgb";
+      const selectedUpside = projectionValue(data, selectedProjection, "upside");
+      const selectedUpsideValue = Number(projectionValue(data, selectedProjection, "upsideRaw"));
+      const isUndervalued = selectedUpsideValue >= 0;
+
+      reportSignal.textContent = isUndervalued ? "UNDERVALUED" : "OVERVALUED";
+      reportSignal.className = `badge rounded-pill ${isUndervalued ? "text-bg-success" : "text-bg-danger"}`;
+      reportFairValue.textContent = projectionValue(data, selectedProjection, "fairPrice");
+      reportUpside.textContent = selectedUpside;
+      reportUpside.className = `h5 ${isUndervalued ? "text-success" : "text-danger"}`;
+      hgbModelNote.classList.toggle("visible", useHgb);
+      projectionButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.projection === selectedProjection);
+      });
+      updateSignalCard(data, isUndervalued, selectedUpside);
+    }
+
+    function updateReport(data) {
+      currentReportData = data;
+      selectedProjection = "sgd";
+      reportTitle.textContent = `${data.symbol} valuation report`;
+      reportSubtitle.textContent = `${data.order_book_id} | ${data.industry} | ${data.quarter} | valuation date ${data.valuation_date}`;
+      reportNotice.className = "alert alert-success py-2 mb-3";
+      reportNotice.textContent = data.signal_sentence;
+      reportMultiple.textContent = data.selected_multiple;
+      reportFairMultiple.textContent = data.final_fair_multiple_formatted;
+      heroClosePrice.textContent = `当前股价: ${data.close_price_formatted} 元 (基于${data.quarter}数据)`;
+      updateProjection();
+    }
+
+    projectionButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedProjection = button.dataset.projection;
+        updateProjection();
+      });
+    });
+
+    lookupForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const company = companyQuery.value.trim();
+      if (!company) {
+        reportNotice.className = "alert alert-warning py-2 mb-3";
+        reportNotice.textContent = "Please enter a company name or order_book_id.";
+        companyQuery.focus();
+        return;
+      }
+
+      reportNotice.className = "alert alert-primary py-2 mb-3";
+      reportNotice.textContent = "Loading real valuation result from local prediction CSV...";
+      try {
+        const response = await fetch(apiUrl(company, "latest"));
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Valuation lookup failed.");
+        }
+        updateReport(data);
+      } catch (error) {
+        reportNotice.className = "alert alert-danger py-2 mb-3";
+        reportNotice.textContent = startupMessage(error);
+      }
+    });
+  </script>
+</body>
+</html>
