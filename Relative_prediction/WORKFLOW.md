@@ -166,33 +166,3 @@ http://127.0.0.1:8765/
 ```
 
 The server reads the same Step 3 prediction and metrics files as the CLI.
-
-## Files to share outside GitHub
-
-Do not upload the `outputs/` folder to GitHub. It is large and contains generated data.
-
-To let another person use the CLI or server, send these CSV files:
-
-```text
-outputs/calculated_feature_database/step3_market_implied_multiple_predictions.csv
-outputs/calculated_feature_database/step3_model_metrics.csv
-```
-
-To let another person rerun Step 3, also send:
-
-```text
-outputs/calculated_feature_database/step2_selected_multiples.csv
-outputs/raw_rqdatac_database/raw_market_labels_2020q1_2025q4.csv
-```
-
-To let another person rerun from Step 1, also send:
-
-```text
-outputs/calculated_feature_database/calculated_feature_input_2020q1_2025q4.csv
-```
-
-Do not send the daily market cache folder unless someone specifically asks for it:
-
-```text
-outputs/raw_rqdatac_database/market_fetch_cache_2020q1_2025q4/
-```
