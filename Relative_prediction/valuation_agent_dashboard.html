@@ -467,8 +467,8 @@
 
     function projectionValue(data, projection, field) {
       if (projection === "hgb") {
-        if (field === "fairPrice") return formatPrice(data.fair_price_hgb ?? data.hgb_fair_price);
-        if (field === "upside") return data.upside_downside_hgb_formatted || formatPercent(data.upside_downside_hgb ?? data.hgb_upside_downside);
+        if (field === "fairPrice") return data.fair_price_hgb_formatted || data.hgb_fair_price_formatted || formatPrice(data.fair_price_hgb ?? data.hgb_fair_price);
+        if (field === "upside") return data.upside_downside_hgb_formatted || data.hgb_upside_downside_formatted || formatPercent(data.upside_downside_hgb ?? data.hgb_upside_downside);
         if (field === "upsideRaw") return data.upside_downside_hgb ?? data.hgb_upside_downside;
       }
       if (field === "fairPrice") return formatPrice(data.fair_price);

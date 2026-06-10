@@ -88,6 +88,7 @@ VENDOR_ENTERPRISE_VALUE_COLUMNS = [
 ]
 
 MIN_SAME_MULTIPLE_PEERS = 3
+EV_EBITDA_BASIS_MISMATCH_RATIO = 0.25
 MODERATE_MULTIPLE_DIVERGENCE_RATIO = 2.0
 EXTREME_MULTIPLE_DIVERGENCE_RATIO = 3.0
 
@@ -1039,10 +1040,24 @@ def calculate_fair_values(predictions: pd.DataFrame) -> pd.DataFrame:
 
             fair_value = result.loc[mask, fair_multiple_col] * base_values.loc[mask]
             if config["fair_value_kind"] == "enterprise":
-                vendor_scale_mask = mask & vendor_ev_available & numeric(result, "actual_selected_multiple").gt(0)
+                actual_multiple = numeric(result, "actual_selected_multiple")
+                recomputed_multiple = numeric(result, "actual_ev_to_ebitda_recomputed")
+                basis_mismatch = (
+                    mask
+                    & vendor_ev_available
+                    & actual_multiple.gt(0)
+                    & recomputed_multiple.gt(0)
+                    & ((recomputed_multiple / actual_multiple.replace(0, np.nan) - 1).abs() > EV_EBITDA_BASIS_MISMATCH_RATIO)
+                )
+                vendor_scale_mask = mask & vendor_ev_available & actual_multiple.gt(0) & ~basis_mismatch
+                vendor_direct_mask = mask & vendor_ev_available & ~vendor_scale_mask
                 formula_base = (
                     "enterprise_value = EBITDA * final blended EV/EBITDA; "
                     "equity_value = enterprise_value - project net debt"
+                )
+                formula_mismatch = (
+                    "enterprise_value = EBITDA * final blended EV/EBITDA; "
+                    "equity_value = enterprise_value - (actual enterprise value - market cap)"
                 )
                 formula_vendor = (
                     "enterprise_value = vendor enterprise value * final blended EV/EBITDA / actual vendor EV/EBITDA; "
@@ -1063,6 +1078,7 @@ def calculate_fair_values(predictions: pd.DataFrame) -> pd.DataFrame:
                 result.loc[mask, ev_ebitda_col] = result.loc[mask, ev_col] / base_values.loc[mask]
                 if suffix == "":
                     result.loc[mask, "fair_value_formula"] = formula_base
+                    result.loc[vendor_direct_mask, "fair_value_formula"] = formula_mismatch
                     result.loc[vendor_scale_mask, "fair_value_formula"] = formula_vendor
                     result.loc[mask, "actual_value_from_selected_multiple"] = result.loc[mask, "actual_enterprise_value"]
                     result.loc[mask, "actual_equity_value_from_selected_multiple"] = (
@@ -1073,14 +1089,12 @@ def calculate_fair_values(predictions: pd.DataFrame) -> pd.DataFrame:
                 result.loc[mask, f"fair_equity_value{suffix}"] = fair_value
                 if suffix == "":
                     result.loc[mask, "fair_value_formula"] = f"equity_value = {config['base']} * final blended {multiple}"
+                    result.loc[mask, "actual_value_from_selected_multiple"] = result.loc[
+                        mask, "actual_selected_multiple"
+                    ] * base_values.loc[mask]
                     result.loc[mask, "actual_equity_value_from_selected_multiple"] = result.loc[
                         mask, "actual_value_from_selected_multiple"
                     ]
-
-        # Actual value for primary model (SGD) — computed once
-        result.loc[mask, "actual_value_from_selected_multiple"] = result.loc[
-            mask, "actual_selected_multiple"
-        ] * base_values.loc[mask]
 
     result["ev_to_ebitda_basis_gap"] = result["actual_ev_to_ebitda_recomputed"] - numeric(result, "ev_to_ebitda")
     result["ev_to_ebitda_basis_gap_pct"] = result["ev_to_ebitda_basis_gap"] / numeric(result, "ev_to_ebitda").replace(
@@ -1094,7 +1108,7 @@ def calculate_fair_values(predictions: pd.DataFrame) -> pd.DataFrame:
             ev_selected & wide_ev_gap & ~vendor_ev_available,
         ],
         [
-            "Vendor enterprise value is used, but project EBITDA implies an EV/EBITDA materially different from the RQData EV/EBITDA label.",
+            "Vendor enterprise value is used for the equity bridge, but project EBITDA implies an EV/EBITDA materially different from the RQData EV/EBITDA label; using direct EBITDA-based fair EV instead of vendor-scaled EV/EBITDA.",
             "Vendor enterprise value is unavailable; using project EV proxy, whose EV/EBITDA differs materially from the RQData EV/EBITDA label.",
         ],
         default="",
