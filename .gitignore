@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Streamlit and local caches
+.streamlit/secrets.toml
+*.sqlite
+*.db
+
+# Large generated artifacts
+outputs/
+Relative_prediction/output/
+Relative_prediction/outputs/
+investment-advisor-agent/.pytest_cache/
+
+# Local model artifacts. Use Git LFS or external storage if these need sharing.
+model/
+*.pkl
+*.joblib
+
+# Reports / slides generated locally
+*.pdf
+*.pptx
+
+# Logs
+*.log
