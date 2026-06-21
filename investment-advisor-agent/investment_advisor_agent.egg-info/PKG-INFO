@@ -1,0 +1,201 @@
+Metadata-Version: 2.4
+Name: investment-advisor-agent
+Version: 0.1.0
+Summary: AI Investment Advisor Agent powered by AKShare data
+License: MIT
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: mcp>=1.0.0
+Requires-Dist: akshare>=1.14.0
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: openai>=1.0.0
+Requires-Dist: langgraph>=1.0.0
+Requires-Dist: streamlit>=1.30.0
+Requires-Dist: plotly>=5.0.0
+Provides-Extra: redis
+Requires-Dist: redis>=5.0.0; extra == "redis"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+
+# AI 投资顾问 Agent
+
+基于 AKShare 数据源 + AI Agent 的智能投资顾问系统。
+
+## 系统架构
+
+```
+用户 → Streamlit UI / CLI
+         ↓
+     编排层 (意图解析 → 并行调度 → 综合决策)
+         ↓                    ↓              ↓              ↓
+   基本面Agent          量价Agent       舆情Agent       宏观Agent
+         ↓                    ↓              ↓              ↓
+              AKShare MCP Server (14个数据工具)
+                      ↓
+              东方财富/同花顺/新浪/巨潮/金十/百度/雪球...
+```
+
+## 快速开始
+
+### 1. 安装依赖
+
+```bash
+cd investment-advisor-agent
+pip install -e ".[dev]"
+```
+
+### 2. 配置 LLM
+
+```bash
+export LLM_API_KEY="your-api-key"
+export LLM_BASE_URL="https://api.openai.com/v1"  # 或兼容端点
+export LLM_MODEL="gpt-4o"
+```
+
+### 3. 启动方式
+
+```bash
+# Web UI (推荐)
+streamlit run ui/app.py
+
+# MCP Server (stdio 模式 — 供 Claude Code / Cursor 调用)
+python -m akshare_mcp_server
+
+# MCP Server (SSE 模式 — 供 Web 应用调用)
+python -m akshare_mcp_server --transport sse --port 8080
+
+# 命令行分析
+python -c "
+from orchestrator.scheduler import analyze_stock
+from models import UserProfile, InvestmentStyle
+profile = UserProfile(style=InvestmentStyle.GROWTH)
+rec = analyze_stock('000001', profile)
+print(rec.model_dump_json(indent=2))
+"
+```
+
+## 项目结构
+
+```
+investment-advisor-agent/
+├── akshare_mcp_server/         # Phase 1: 数据获取层
+│   ├── server.py               # MCP Server (14个工具)
+│   ├── cache.py                # 缓存层 (SQLite/Redis, TTL自动管理)
+│   ├── rate_limiter.py         # 限流层 (令牌桶, 11个数据源分组)
+│   └── tools/                  # 5组数据工具
+│       ├── fundamental.py     # 基本面 (3个工具)
+│       ├── price_volume.py    # 量价 (4个工具)
+│       ├── sentiment.py       # 舆情 (3个工具)
+│       ├── macro.py           # 宏观 (2个工具)
+│       └── sector.py          # 行业 (2个工具)
+│
+├── agents/                     # Phase 2: 分析 Agent 层
+│   ├── data_provider.py        # 统一数据获取接口
+│   ├── llm_utils.py            # LLM 调用工具 (JSON结构化输出)
+│   ├── fundamental_agent.py   # 基本面 Agent
+│   ├── technical_agent.py     # 量价 Agent
+│   ├── sentiment_agent.py     # 舆情 Agent
+│   └── macro_agent.py         # 宏观 Agent
+│
+├── orchestrator/               # Phase 3: 编排层
+│   ├── planner.py              # 意图解析 (6种意图)
+│   ├── decision_agent.py       # 综合决策 Agent (加权+风险过滤)
+│   ├── risk_filter.py          # 风险过滤器 (质押/ST/流动性/估值)
+│   └── scheduler.py           # 并行调度 + 路由
+│
+├── ui/                         # Phase 4: 用户界面
+│   └── app.py                  # Streamlit 交互界面
+│
+├── models/                     # 数据模型 (Pydantic)
+│   └── __init__.py             # 14个结构化模型
+│
+├── config/                     # 配置
+│   ├── settings.py             # LLM/权重配置
+│   └── agent_prompts/          # 4个提示词模板
+│
+└── tests/                      # 测试 (92个)
+    ├── test_core.py            # MCP 层 32个测试
+    ├── test_agents.py          # Agent 层 34个测试
+    └── test_integration.py    # 集成层 26个测试
+```
+
+## 14 个 MCP 工具
+
+| 类别 | 工具名 | 功能 |
+|------|-------|------|
+| 基本面 | `get_stock_fundamental` | 个股估值+指标+三表 |
+| | `get_stock_profit_forecast` | 分析师盈利预测 |
+| | `get_stock_earnings_preview` | 业绩预告/快报 |
+| 量价 | `get_stock_price_volume` | 日/周/月K线 |
+| | `get_stock_capital_flow` | 资金流向(个股/板块/市场/北向) |
+| | `get_stock_lhb` | 龙虎榜 |
+| | `get_stock_margin_detail` | 融资融券 |
+| 舆情 | `get_stock_sentiment` | 千股千评+热搜+微博 |
+| | `get_stock_news` | 新闻(个股/市场/央视) |
+| | `get_stock_market_emotion` | 市场情绪(拥挤度/巴菲特/涨停池) |
+| 宏观 | `get_macro_china_overview` | 中国宏观(GDP/CPI/PMI/M2/利率) |
+| | `get_macro_global_interest` | 全球11国央行利率 |
+| 行业 | `get_stock_sector_analysis` | 行业/概念板块分析 |
+| | `get_stock_market_valuation` | 市场估值(PE/PB/巴菲特) |
+
+## 分析维度
+
+| 维度 | 子维度 | 数据源 | 权重(均衡型) |
+|------|--------|--------|------------|
+| 📋 基本面 | 财务健康度 + 估值合理性 + 盈利成长性 | 东方财富/同花顺 | 25% |
+| 📈 量价 | 趋势判断 + 动量信号 + 资金流向 | 东方财富 | 25% |
+| 🔥 舆情 | 市场情绪 + 社交热度 + 整体情绪 | 东方财富/百度/微博 | 25% |
+| 🌐 宏观 | 经济周期 + 货币环境 + 产业景气 | 统计局/财新/各国央行 | 25% |
+
+## 投资建议等级
+
+| 评分范围 | 等级 | 含义 |
+|---------|------|------|
+| 85-100 | 🔥 强烈推荐 | 多维度共振，风险可控 |
+| 70-84 | 👍 积极关注 | 有明确逻辑支撑 |
+| 55-69 | 🤝 适度配置 | 有亮点但有隐忧 |
+| 40-54 | 👀 谨慎观望 | 信号矛盾或风险偏高 |
+| 0-39 | 🚫 回避 | 风险显著或趋势恶化 |
+
+## 风险过滤规则
+
+| 风险信号 | 处理方式 |
+|---------|---------|
+| PE(TTM) < 0 (亏损) | 评分降级 20% |
+| PE(TTM) > 200 (泡沫) | 评分降级 10% |
+| 日成交额 < 1000万 | 评分降级 10% |
+| 回避行业个股 | 评分降级 10% |
+
+## 测试
+
+```bash
+# 运行全部 92 个测试
+PYTHONPATH=. pytest tests/ -v
+
+# 仅运行 MCP 层测试
+PYTHONPATH=. pytest tests/test_core.py -v
+
+# 仅运行 Agent 层测试
+PYTHONPATH=. pytest tests/test_agents.py -v
+
+# 仅运行集成测试
+PYTHONPATH=. pytest tests/test_integration.py -v
+```
+
+## 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `LLM_API_KEY` | 空 | LLM API Key (必填) |
+| `LLM_BASE_URL` | `https://api.openai.com/v1` | LLM API 地址 |
+| `LLM_MODEL` | `gpt-4o` | 分析用模型 |
+| `LLM_FAST_MODEL` | `gpt-4o-mini` | 数据提取用快速模型 |
+| `LLM_TEMPERATURE` | `0.1` | 温度参数 |
+| `MCP_SERVER_URL` | `http://localhost:8080` | MCP SSE 地址 |
+
+## 免责声明
+
+⚠️ 本项目提供的所有分析和建议仅供参考，不构成任何投资建议。投资有风险，入市需谨慎。
